@@ -1,0 +1,1037 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>石家庄周边游 · 筛选 & 随机转盘</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  :root {
+    --primary: #2f6f4f;
+    --primary-light: #e8f3ec;
+    --accent: #e07a3f;
+    --bg: #f7f6f2;
+    --card: #ffffff;
+    --text: #2b2b2b;
+    --muted: #7a7a72;
+    --border: #e5e3db;
+  }
+  body {
+    font-family: "Microsoft YaHei", "PingFang SC", sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+  }
+  header {
+    background: linear-gradient(135deg, #2f6f4f 0%, #3d8a63 60%, #56a379 100%);
+    color: #fff;
+    padding: 26px 32px;
+  }
+  header h1 { font-size: 24px; letter-spacing: 1px; }
+  header p { margin-top: 6px; opacity: .85; font-size: 13px; }
+  .layout {
+    display: grid;
+    grid-template-columns: 300px 1fr 420px;
+    gap: 20px;
+    padding: 20px 32px;
+    max-width: 1500px;
+    margin: 0 auto;
+  }
+  @media (max-width: 1200px) {
+    .layout { grid-template-columns: 1fr; }
+  }
+  .panel {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 18px;
+    height: fit-content;
+    position: sticky;
+    top: 16px;
+  }
+  .panel h2 {
+    font-size: 15px;
+    margin-bottom: 12px;
+    color: var(--primary);
+    border-bottom: 2px solid var(--primary-light);
+    padding-bottom: 8px;
+  }
+  .filter-group { margin-bottom: 16px; }
+  .filter-group label.group-title {
+    display: block; font-size: 13px; font-weight: bold; margin-bottom: 8px; color: #444;
+  }
+  .check-list { display: flex; flex-wrap: wrap; gap: 6px; }
+  .chip {
+    display: inline-flex; align-items: center; gap: 4px;
+    font-size: 12.5px; padding: 5px 10px; border-radius: 999px;
+    border: 1px solid var(--border); background: #fff; cursor: pointer;
+    user-select: none; transition: all .15s;
+  }
+  .chip.on {
+    background: var(--primary-light); border-color: var(--primary); color: var(--primary); font-weight: bold;
+  }
+  input[type=range] { width: 100%; accent-color: var(--primary); }
+  .range-val { font-size: 13px; color: var(--primary); font-weight: bold; }
+  select, input[type=text] {
+    width: 100%; padding: 8px 10px; border: 1px solid var(--border);
+    border-radius: 8px; font-size: 13px; background: #fff;
+  }
+  .toggle-row { display: flex; align-items: center; gap: 8px; font-size: 13px; }
+  .btn {
+    display: inline-block; border: none; cursor: pointer; border-radius: 10px;
+    padding: 10px 18px; font-size: 14px; font-weight: bold; transition: all .15s;
+  }
+  .btn-reset { background: #eee; color: #666; }
+  .btn-reset:hover { background: #e0e0e0; }
+  .btn-spin {
+    background: var(--accent); color: #fff; font-size: 18px; padding: 14px 40px;
+    border-radius: 999px; box-shadow: 0 4px 14px rgba(224,122,63,.4);
+  }
+  .btn-spin:hover:not(:disabled) { transform: scale(1.04); }
+  .btn-spin:disabled { opacity: .5; cursor: not-allowed; }
+  .results { display: flex; flex-direction: column; gap: 10px; }
+  .result-head {
+    display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;
+  }
+  .result-head .count { font-size: 13px; color: var(--muted); }
+  .card {
+    background: var(--card); border: 1px solid var(--border); border-radius: 12px;
+    padding: 12px 14px; display: flex; justify-content: space-between; gap: 10px;
+    align-items: flex-start; transition: box-shadow .15s;
+  }
+  .card:hover { box-shadow: 0 3px 12px rgba(0,0,0,.07); }
+  .card .name { font-size: 15px; font-weight: bold; }
+  .card .meta { font-size: 12.5px; color: var(--muted); margin-top: 4px; line-height: 1.7; }
+  .tag {
+    display: inline-block; font-size: 11px; padding: 2px 8px; border-radius: 999px;
+    background: var(--primary-light); color: var(--primary); margin-right: 4px;
+  }
+  .tag.free { background: #fdf0e6; color: #b35a1f; }
+  .card .dist-box { text-align: right; min-width: 90px; flex-shrink: 0; }
+  .card .dist { font-size: 16px; font-weight: bold; color: var(--primary); }
+  .card .drive { font-size: 12px; color: var(--muted); }
+  /* ===== 右侧待选区：占满整栏 ===== */
+  .wheel-panel {
+    text-align: center;
+    display: flex; flex-direction: column;
+    height: calc(100vh - 140px);
+    min-height: 420px;
+    overflow: hidden;
+  }
+  .wheel-panel .cand-list {
+    flex: 1; max-height: none; min-height: 0;
+  }
+  .wheel-panel .spin-area {
+    margin-top: 12px; padding-top: 12px;
+    border-top: 2px solid var(--primary-light);
+  }
+  .panel-winner { margin-top: 10px; font-size: 13px; color: var(--muted); min-height: 18px; }
+  .panel-winner b { color: var(--accent); font-size: 15px; }
+
+  /* ===== 全屏转盘弹窗 ===== */
+  .wheel-modal {
+    display: none;
+    position: fixed; inset: 0; z-index: 100;
+    background: radial-gradient(ellipse at center, rgba(28,58,44,.96) 0%, rgba(12,26,20,.98) 100%);
+    flex-direction: column; align-items: center; justify-content: center;
+    gap: 10px; padding: 14px; overflow: hidden;
+  }
+  .wheel-modal.open { display: flex; }
+  .modal-close {
+    position: absolute; top: 18px; right: 22px; z-index: 10;
+    border: 1px solid rgba(255,255,255,.3); background: rgba(255,255,255,.08);
+    color: #fff; font-size: 20px; width: 44px; height: 44px; border-radius: 50%;
+    cursor: pointer; transition: all .15s;
+  }
+  .modal-close:hover { background: rgba(255,255,255,.2); transform: rotate(90deg); }
+  .modal-title { color: #ffd97a; font-size: 17px; font-weight: bold; letter-spacing: 2px; flex-shrink: 0; }
+  .wheel-wrap {
+    position: relative;
+    /* 宽高锁定同一个值 + 强制 1:1 比例，任何屏幕下都是正圆 */
+    width: min(92vmin, calc(100vh - 180px), 880px);
+    aspect-ratio: 1 / 1;
+    height: auto;
+    margin: 0 auto; flex-shrink: 0; /* 转盘尺寸锁定，不因开奖文字挤压变形 */
+  }
+  .wheel-modal canvas { width: 100%; height: 100%; }
+  .wheel-modal .wheel-wrap { margin-top: 26px; } /* 给顶部指针留空间，避免压到标题 */
+  .wheel-modal .spin-area { margin-top: 0; flex-shrink: 0; }
+  /* 开奖结果：全屏居中悬浮层，不挤占转盘空间 */
+  .wheel-modal .winner {
+    position: fixed; inset: 0; z-index: 30;
+    display: flex; align-items: center; justify-content: center;
+    margin: 0; min-height: 0; pointer-events: none;
+  }
+  .wheel-modal .winner:empty { display: none; }
+  .wheel-modal .winner .w-card {
+    pointer-events: auto;
+    background: rgba(10, 26, 19, .88);
+    border: 2px solid #ffd97a; border-radius: 18px;
+    box-shadow: 0 0 40px rgba(255, 205, 90, .35);
+    padding: 26px 48px; text-align: center;
+    max-width: min(80vw, 640px);
+    animation: popIn .45s cubic-bezier(.2, 1.4, .4, 1);
+  }
+  @keyframes popIn {
+    0% { transform: scale(.6); opacity: 0; }
+    100% { transform: scale(1); opacity: 1; }
+  }
+  .wheel-modal .winner { font-size: 20px; }
+  .wheel-modal .winner .w-name { font-size: 44px; margin-top: 6px; }
+  .wheel-modal .winner .w-info { font-size: 16px; color: #cfe0d4; margin-top: 10px; }
+  .pointer {
+    position: absolute; top: -6px; left: 50%; transform: translateX(-50%);
+    width: 0; height: 0; z-index: 5;
+    border-left: 14px solid transparent; border-right: 14px solid transparent;
+    border-top: 26px solid var(--accent);
+    filter: drop-shadow(0 2px 3px rgba(0,0,0,.25));
+  }
+  .pointer::after {
+    content: ""; position: absolute; left: -7px; top: -26px;
+    width: 14px; height: 10px; background: var(--accent); border-radius: 4px 4px 0 0;
+  }
+  canvas { display: block; }
+  .wheel-empty {
+    position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+    color: var(--muted); font-size: 14px; text-align: center; padding: 0 50px;
+  }
+  .spin-area { margin-top: 14px; }
+  .winner {
+    margin-top: 14px; font-size: 16px; min-height: 48px; text-align: center;
+  }
+  .wheel-modal .winner { color: #fff; margin-top: 6px; }
+  .winner .w-name {
+    font-size: 22px; font-weight: bold; color: var(--accent);
+  }
+  .winner .w-info { font-size: 13px; color: var(--muted); margin-top: 4px; line-height: 1.6; }
+  .hub-center {
+    position: absolute; left: 50%; top: 50%; transform: translate(-50%,-50%);
+    width: 54px; height: 54px; border-radius: 50%; background: #fff;
+    border: 4px solid var(--primary); z-index: 4;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 22px; box-shadow: 0 2px 8px rgba(0,0,0,.15);
+  }
+  .empty-tip { color: var(--muted); font-size: 13px; padding: 20px 0; }
+  /* ===== 光影特效 ===== */
+  .wheel-wrap.spinning canvas {
+    filter: drop-shadow(0 0 16px rgba(224,122,63,.65));
+  }
+  .wheel-wrap.spinning .pointer {
+    filter: drop-shadow(0 0 10px rgba(255,180,70,.95));
+  }
+  .wheel-wrap.flash {
+    animation: winflash 1s ease-out 2;
+  }
+  @keyframes winflash {
+    0%   { filter: drop-shadow(0 0 36px rgba(255,205,90,.95)) brightness(1.35); }
+    100% { filter: drop-shadow(0 0 4px rgba(255,205,90,0)) brightness(1); }
+  }
+  /* ===== 勾选 / 随机抽 / 待选区 ===== */
+  .card.pickable { cursor: pointer; }
+  .card .pick-box {
+    margin-top: 3px; transform: scale(1.35); accent-color: var(--primary); flex-shrink: 0;
+  }
+  .rand-row { display: flex; gap: 8px; }
+  .rand-row input[type=number] {
+    width: 70px; padding: 8px 10px; border: 1px solid var(--border);
+    border-radius: 8px; font-size: 13px;
+  }
+  .btn-rand { background: var(--primary); color: #fff; flex: 1; padding: 8px 12px; }
+  .btn-rand:hover { background: #275d41; }
+  .cand-list {
+    max-height: 210px; overflow-y: auto; text-align: left;
+    display: flex; flex-direction: column; gap: 6px; margin-bottom: 6px;
+  }
+  .cand-item {
+    display: flex; align-items: center; justify-content: space-between; gap: 6px;
+    background: var(--primary-light); border-radius: 8px; padding: 6px 10px; font-size: 13px;
+  }
+  .cand-item .cand-name { font-weight: bold; }
+  .cand-item .cand-meta { color: var(--muted); font-size: 11.5px; }
+  .cand-del {
+    border: none; background: transparent; color: #c0605a; cursor: pointer;
+    font-size: 15px; padding: 0 4px; flex-shrink: 0;
+  }
+  .cand-del:hover { color: #a03028; }
+  .cand-empty { color: var(--muted); font-size: 12.5px; text-align: center; padding: 12px 6px; }
+  .cand-count { font-size: 12px; color: var(--muted); font-weight: normal; }
+  footer {
+    text-align: center; color: #aaa; font-size: 12px; padding: 24px 0 30px;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>🧭 石家庄周边游 · 筛选 & 随机转盘</h1>
+  <p>131 个景点 · 河北 + 山西 + 河南 | 按城市、类型、距离、天数筛选 → 转盘帮你做决定！</p>
+</header>
+
+<div class="layout">
+  <!-- 左侧：筛选 -->
+  <div class="panel">
+    <h2>🎯 筛选条件</h2>
+    <div class="filter-group">
+      <label class="group-title">省份</label>
+      <select id="provinceSelect"><option value="all">全部省份</option></select>
+    </div>
+    <div class="filter-group">
+      <label class="group-title">城市</label>
+      <select id="citySelect"><option value="all">全部城市</option></select>
+    </div>
+    <div class="filter-group">
+      <label class="group-title">景点类型</label>
+      <select id="typeSelect"><option value="all">全部类型</option></select>
+    </div>
+    <div class="filter-group">
+      <label class="group-title">最大距离：<span class="range-val" id="distVal">700 km</span></label>
+      <input type="range" id="distRange" min="0" max="700" step="10" value="700">
+    </div>
+    <div class="filter-group">
+      <label class="group-title">建议游玩天数</label>
+      <select id="daysSelect">
+        <option value="all">不限</option>
+        <option value="0.5">半天（0.5天）</option>
+        <option value="1">1天（当天往返）</option>
+        <option value="2">2天（过周末）</option>
+        <option value="3">3天（小长假）</option>
+      </select>
+    </div>
+    <div class="filter-group">
+      <label class="group-title">关键字搜索</label>
+      <input type="text" id="searchBox" placeholder="如：温泉、古镇、滑雪…">
+    </div>
+    <div class="filter-group toggle-row">
+      <input type="checkbox" id="freeOnly"> <label for="freeOnly">只看免费景点</label>
+    </div>
+    <div class="filter-group">
+      <label class="group-title">随机抽 X 个加入待选区</label>
+      <div class="rand-row">
+        <input type="number" id="randCount" value="3" min="1" max="99">
+        <button class="btn btn-rand" id="randPickBtn">🎲 随机选</button>
+      </div>
+    </div>
+    <button class="btn btn-reset" id="resetBtn">↺ 重置筛选条件</button>
+  </div>
+
+  <!-- 中间：结果列表 -->
+  <div>
+    <div class="result-head">
+      <h2 style="font-size:16px;">📋 符合条件的景点</h2>
+      <span class="count" id="countText"></span>
+    </div>
+    <div class="results" id="resultList"></div>
+  </div>
+
+  <!-- 右侧：待选区（占满整栏）+ 开始转按钮 -->
+  <div class="panel wheel-panel">
+    <h2>⭐ 待选区 <span class="cand-count" id="candCount"></span></h2>
+    <div class="cand-list" id="candList"></div>
+    <div class="spin-area">
+      <button class="btn btn-spin" id="openSpinBtn">🎡 开始转！</button>
+      <div class="panel-winner" id="panelWinner"></div>
+    </div>
+  </div>
+</div>
+
+<footer>数据整理自携程 / 同程 / 石家庄市文广旅局公开信息 · 距离与时长为市区出发自驾估算，出行前请再核实</footer>
+
+<!-- 全屏转盘弹窗 -->
+<div class="wheel-modal" id="wheelModal">
+  <button class="modal-close" id="modalClose" title="关闭">✕</button>
+  <div class="modal-title">🎡 幸运转盘</div>
+  <div class="wheel-wrap">
+    <div class="pointer"></div>
+    <canvas id="wheel" width="800" height="800"></canvas>
+    <div class="wheel-empty" id="wheelEmpty" style="display:none;">待选区还是空的<br>先去勾选或随机抽取景点吧～</div>
+    <div class="hub-center">🎲</div>
+  </div>
+  <div class="spin-area">
+    <button class="btn btn-spin" id="spinBtn">开始转！</button>
+  </div>
+  <div class="winner" id="winnerBox"></div>
+</div>
+
+<script>
+const DATA = [
+  {"name":"河北博物院","city":"石家庄市区","type":"历史人文","features":"了解河北历史；长信宫灯、金缕玉衣等镇馆之宝","distance":0,"drive":15,"days":0.5,"ticket":"免费","isFree":true,"note":"周一闭馆 需预约"},
+  {"name":"正太广场(正太饭店)","city":"石家庄市区","type":"历史人文","features":"石家庄现存最早的法国古典主义建筑、城市原点","distance":2,"drive":10,"days":0.5,"ticket":"免费","isFree":true,"note":"市区打卡"},
+  {"name":"湾里庙步行街·火车头步行街","city":"石家庄市区","type":"美食街区","features":"石家庄最老商业街+老火车站主题街区，小吃集中","distance":2,"drive":10,"days":0.5,"ticket":"免费","isFree":true,"note":"晚上更热闹"},
+  {"name":"滹沱河艺术生态岛","city":"石家庄市区","type":"亲子休闲","features":"滹沱河最大天然岛，滨水休闲/野奢营地/亲子互动","distance":12,"drive":25,"days":1,"ticket":"免费(项目另收费)","isFree":true,"note":"适合露营野餐"},
+  {"name":"抱犊寨","city":"石家庄鹿泉区","type":"自然山水","features":"山势陡峻的军事山寨，可登山或坐索道俯瞰市区","distance":20,"drive":40,"days":1,"ticket":"57元(索道另收费)","isFree":false,"note":"爬山强度中等"},
+  {"name":"石家庄市动物园","city":"石家庄鹿泉区","type":"亲子休闲","features":"观赏珍禽异兽，毗邻辛玛王国游乐园","distance":15,"drive":30,"days":1,"ticket":"30元","isFree":false,"note":"适合带娃"},
+  {"name":"龙泉古镇·戏剧幻城","city":"石家庄鹿泉区","type":"古镇古村","features":"明清民国老建筑集群+沉浸式演出+飞行影院","distance":15,"drive":30,"days":1,"ticket":"98元起","isFree":false,"note":"夜景好看"},
+  {"name":"西部长青休博城(德明古镇)","city":"石家庄鹿泉区","type":"温泉度假","features":"德明古镇+室内外滑雪场+温泉谷，冬夏都好玩","distance":20,"drive":40,"days":1,"ticket":"古镇免费 滑雪温泉另收费","isFree":true,"note":"可玩一整天"},
+  {"name":"正定古城(南城门)","city":"石家庄正定县","type":"古镇古村","features":"千年古城墙、夜景灯光秀、夜市小吃","distance":17,"drive":35,"days":1,"ticket":"免费","isFree":true,"note":"傍晚去最好"},
+  {"name":"隆兴寺","city":"石家庄正定县","type":"历史人文","features":"始建于隋朝的皇家寺庙，宋代彩塑倒坐观音","distance":18,"drive":40,"days":0.5,"ticket":"50元","isFree":false,"note":"京外名刹之首"},
+  {"name":"正定荣国府","city":"石家庄正定县","type":"历史人文","features":"红楼梦取景地，87版《红楼梦》影视基地","distance":18,"drive":40,"days":0.5,"ticket":"38元","isFree":false,"note":"晚上有夜场"},
+  {"name":"赵云庙","city":"石家庄正定县","type":"历史人文","features":"常山赵子龙故里纪念庙宇","distance":18,"drive":40,"days":0.5,"ticket":"20元","isFree":false,"note":"可与荣国府同游"},
+  {"name":"正定热雪奇迹","city":"石家庄正定县","type":"滑雪冰雪","features":"室内滑雪场，一年四季可滑","distance":20,"drive":40,"days":1,"ticket":"248元起(3小时)","isFree":false,"note":"夏天也能滑雪"},
+  {"name":"赵州桥","city":"石家庄赵县","type":"历史人文","features":"世界现存最古老的敞肩式石拱桥，课本里的桥","distance":45,"drive":60,"days":0.5,"ticket":"35元左右","isFree":false,"note":"与柏林禅寺同游"},
+  {"name":"柏林禅寺","city":"石家庄赵县","type":"历史人文","features":"1800年古刹，赵州祖庭，古柏苍翠","distance":45,"drive":60,"days":0.5,"ticket":"免费","isFree":true,"note":"氛围安静"},
+  {"name":"赵县梨园小镇","city":"石家庄赵县","type":"亲子休闲","features":"万亩梨园，春天梨花如雪，秋天摘梨","distance":55,"drive":72,"days":0.5,"ticket":"免费","isFree":true,"note":"4月赏梨花最佳"},
+  {"name":"封龙书院·封龙山","city":"石家庄元氏县","type":"历史人文","features":"河北书院发源地之一，历代讲学名山","distance":30,"drive":50,"days":1,"ticket":"免费或低价","isFree":true,"note":"山不高好爬"},
+  {"name":"蟠龙湖","city":"石家庄元氏县","type":"自然山水","features":"湖面宽阔山水相依，可钓鱼烧烤休闲度假区","distance":30,"drive":50,"days":1,"ticket":"免费(项目另收费)","isFree":true,"note":"夏天玩水"},
+  {"name":"光禄山","city":"石家庄平山县","type":"自然山水","features":"登山步道+萌宠乐园，山脚农家菜好吃","distance":30,"drive":50,"days":0.5,"ticket":"免费","isFree":true,"note":"小众不挤"},
+  {"name":"西柏坡纪念馆","city":"石家庄平山县","type":"红色教育","features":"新中国从这里走来，红色教育基地","distance":85,"drive":90,"days":1,"ticket":"免费需预约","isFree":true,"note":"可结合岗南水库"},
+  {"name":"柏里水乡","city":"石家庄平山县","type":"亲子休闲","features":"西倚太行环拥滹沱，市集美食+滨水度假","distance":85,"drive":90,"days":1,"ticket":"免费入园(项目另收费)","isFree":true,"note":"可住一晚"},
+  {"name":"白鹿温泉","city":"石家庄平山县","type":"温泉度假","features":"高品质温泉度假村，富含矿物质微量元素","distance":75,"drive":78,"days":2,"ticket":"159元起","isFree":false,"note":"适合过周末"},
+  {"name":"驼梁风景区","city":"石家庄平山县","type":"自然山水","features":"峡谷森林瀑布，山顶高山草甸，避暑胜地","distance":130,"drive":150,"days":2,"ticket":"65元","isFree":false,"note":"夏天凉快"},
+  {"name":"沕沕水生态风景区","city":"石家庄平山县","type":"自然山水","features":"山清水秀瀑布成群，冬天有冰瀑节","distance":95,"drive":108,"days":1,"ticket":"60元","isFree":false,"note":"冬季冰瀑很出片"},
+  {"name":"天桂山风景区","city":"石家庄平山县","type":"自然山水","features":"太行名山，有北方桂林之称，山中有道观","distance":95,"drive":108,"days":1,"ticket":"39.9元","isFree":false,"note":"可与沕沕水连游"},
+  {"name":"红崖谷景区","city":"石家庄平山县","type":"自然山水","features":"玻璃吊桥(穿云桥)+山谷步道","distance":75,"drive":78,"days":1,"ticket":"39.9元","isFree":false,"note":"适合半日到一日"},
+  {"name":"清风峡生态旅游区","city":"石家庄平山县","type":"自然山水","features":"山青水碧、原始村落，有竹筏和七彩滑道","distance":100,"drive":120,"days":1,"ticket":"48元","isFree":false,"note":"夏天亲子玩水"},
+  {"name":"岗南水库","city":"石家庄平山县","type":"自然山水","features":"滹沱河大型水库，湖景开阔适合拍照散心","distance":80,"drive":90,"days":0.5,"ticket":"免费","isFree":true,"note":"顺路去西柏坡"},
+  {"name":"苍岩山","city":"石家庄井陉县","type":"自然山水","features":"苍岩三绝：桥殿飞虹、碧涧灵檀、古柏朝圣","distance":70,"drive":90,"days":1,"ticket":"65元左右","isFree":false,"note":"《卧虎藏龙》取景地"},
+  {"name":"于家石头村","city":"石家庄井陉县","type":"古镇古村","features":"500年石头古村，清凉阁无梁殿建筑奇观","distance":65,"drive":84,"days":1,"ticket":"30元左右","isFree":false,"note":"明清石头四合院"},
+  {"name":"秦皇古驿道","city":"石家庄井陉县","type":"历史人文","features":"冀晋通衢古道，深尺余车辙见证千年繁华","distance":50,"drive":72,"days":0.5,"ticket":"25元左右","isFree":false,"note":"与天长古镇同游"},
+  {"name":"天长古镇","city":"石家庄井陉县","type":"古镇古村","features":"明代古城墙、青石板路、王家大院砖雕","distance":50,"drive":72,"days":1,"ticket":"免费","isFree":true,"note":"人少清静"},
+  {"name":"南横口陶瓷水镇","city":"石家庄井陉县","type":"古镇古村","features":"2000年陶瓷之乡，井陉窑发源地，水岸古村","distance":40,"drive":60,"days":0.5,"ticket":"免费","isFree":true,"note":"适合拍照遛娃"},
+  {"name":"大梁江村","city":"石家庄井陉县","type":"古镇古村","features":"太行深处明清古村落群，武举人故居","distance":70,"drive":90,"days":1,"ticket":"免费或低价","isFree":true,"note":"与吕家村可连游"},
+  {"name":"吕家村","city":"石家庄井陉县","type":"古镇古村","features":"太行天路古村落，红石民居保存完好","distance":60,"drive":78,"days":0.5,"ticket":"免费","isFree":true,"note":"自驾太行天路沿线"},
+  {"name":"段家楼","city":"石家庄井陉矿区","type":"历史人文","features":"百年德式建筑楼群，正丰矿工业遗产","distance":45,"drive":66,"days":0.5,"ticket":"免费或低价","isFree":true,"note":"小众工业风"},
+  {"name":"井陉红河大峡谷漂流","city":"石家庄井陉县","type":"漂流玩水","features":"超级刺激的峡谷漂流，夏季限定","distance":55,"drive":72,"days":0.5,"ticket":"100元左右","isFree":false,"note":"仅夏季开放"},
+  {"name":"漫山花溪谷","city":"石家庄灵寿县","type":"自然山水","features":"溪流瀑布花海，观光车+平缓栈道，徒步不累","distance":110,"drive":120,"days":2,"ticket":"59元左右","isFree":false,"note":"5-10月最美"},
+  {"name":"水泉溪","city":"石家庄灵寿县","type":"自然山水","features":"彩虹瀑布、天然溶洞，亲水步道玩水","distance":115,"drive":132,"days":2,"ticket":"50元左右","isFree":false,"note":"夏天避暑"},
+  {"name":"嶂石岩","city":"石家庄赞皇县","type":"自然山水","features":"嶂石岩地貌命名地，丹崖碧嶂云海","distance":110,"drive":120,"days":2,"ticket":"65元左右","isFree":false,"note":"夏天避暑冬天冰瀑"},
+  {"name":"棋盘山","city":"石家庄赞皇县","type":"自然山水","features":"杏花沟+古栈道，登山赏花","distance":100,"drive":120,"days":1,"ticket":"45元左右","isFree":false,"note":"春天赏杏花"},
+  {"name":"直隶总督署·古莲花池","city":"保定市区","type":"历史人文","features":"清代总督衙门+北方名园，保定老城核心","distance":140,"drive":120,"days":1,"ticket":"30元左右","isFree":false,"note":"和保定小吃一条街顺路"},
+  {"name":"满城汉墓","city":"保定满城区","type":"历史人文","features":"金缕玉衣出土地，中山靖王刘胜墓","distance":150,"drive":132,"days":1,"ticket":"65元左右","isFree":false,"note":"长信宫灯出土地"},
+  {"name":"白洋淀","city":"保定安新县(雄安)","type":"草原湿地","features":"华北最大淡水湖，芦苇荡+荷花淀+雁翎队故事","distance":170,"drive":150,"days":2,"ticket":"入淀费40元 船票另计","isFree":false,"note":"夏天赏荷最佳"},
+  {"name":"狼牙山","city":"保定易县","type":"红色教育","features":"五壮士跳崖处，山顶玻璃观景台","distance":190,"drive":150,"days":1,"ticket":"80元左右","isFree":false,"note":"可结合易县农家院"},
+  {"name":"清西陵","city":"保定易县","type":"历史人文","features":"雍正/嘉庆/道光/光绪陵寝，万顷古松林","distance":200,"drive":150,"days":1,"ticket":"108元通票","isFree":false,"note":"世界文化遗产"},
+  {"name":"易水湖","city":"保定易县","type":"自然山水","features":"北方小桂林，湖上乘船登山","distance":220,"drive":168,"days":2,"ticket":"80元左右","isFree":false,"note":"和太行水镇连游"},
+  {"name":"恋乡·太行水镇","city":"保定易县","type":"古镇古村","features":"太行风情水镇，小吃多适合遛娃","distance":225,"drive":168,"days":2,"ticket":"免费","isFree":true,"note":"可住一晚"},
+  {"name":"野三坡·百里峡","city":"保定涞水县","type":"自然山水","features":"天下第一峡+拒马河漂流，避暑胜地","distance":230,"drive":180,"days":2,"ticket":"100元左右","isFree":false,"note":"夏季玩水冬季冰瀑"},
+  {"name":"白石山","city":"保定涞源县","type":"自然山水","features":"玻璃栈道+大理岩峰林，云海出片","distance":280,"drive":210,"days":2,"ticket":"135元左右","isFree":false,"note":"京津冀网红名山"},
+  {"name":"香河第一城","city":"廊坊香河县","type":"历史人文","features":"按明清北京城1:1仿建，拍古风大片","distance":340,"drive":240,"days":2,"ticket":"60元左右","isFree":false,"note":"园子很大建议电瓶车"},
+  {"name":"吴桥杂技大世界","city":"沧州吴桥县","type":"亲子休闲","features":"杂技之乡，江湖文化城看绝活","distance":200,"drive":150,"days":1,"ticket":"160元左右","isFree":false,"note":"表演场次上午多"},
+  {"name":"沧州铁狮子","city":"沧州市区","type":"历史人文","features":"千年铁狮子，沧州城市名片","distance":280,"drive":210,"days":1,"ticket":"免费或低价","isFree":true,"note":"可顺路吃沧州火锅鸡"},
+  {"name":"南大港湿地","city":"沧州黄骅","type":"草原湿地","features":"候鸟迁徙驿站，观鸟拍鸟天堂","distance":350,"drive":240,"days":2,"ticket":"70元左右","isFree":false,"note":"春秋候鸟季最佳"},
+  {"name":"衡水湖","city":"衡水市","type":"草原湿地","features":"华北单体最大淡水湖，观鸟乘船","distance":130,"drive":108,"days":1,"ticket":"免费(船票另计)","isFree":true,"note":"候鸟季节更美"},
+  {"name":"闾里古镇","city":"衡水冀州区","type":"古镇古村","features":"汉风小镇，孙敬学堂国学研学","distance":140,"drive":120,"days":1,"ticket":"免费或低价","isFree":true,"note":"适合带娃半日"},
+  {"name":"崆山白云洞","city":"邢台临城县","type":"自然山水","features":"北方罕见大溶洞，地下岩宫","distance":110,"drive":90,"days":1,"ticket":"100元左右","isFree":false,"note":"洞内恒温夏凉"},
+  {"name":"天河山","city":"邢台信都区","type":"自然山水","features":"牛郎织女传说地，情人山+漂流","distance":150,"drive":120,"days":1,"ticket":"70元左右","isFree":false,"note":"夏天可漂流"},
+  {"name":"邢台大峡谷","city":"邢台信都区","type":"自然山水","features":"太行群峡奇观，赤壁丹崖","distance":140,"drive":120,"days":1,"ticket":"70元左右","isFree":false,"note":"爬升不大"},
+  {"name":"丛台公园","city":"邯郸市区","type":"历史人文","features":"武灵丛台，赵国遗韵","distance":170,"drive":132,"days":1,"ticket":"免费","isFree":true,"note":"顺路尝邯郸拽面"},
+  {"name":"广府古城","city":"邯郸永年区","type":"古镇古村","features":"水中太极古城，杨式武式太极拳发源地","distance":190,"drive":150,"days":1,"ticket":"城内免费 联票约70元","isFree":true,"note":"护城河湿地环绕"},
+  {"name":"响堂山石窟","city":"邯郸峰峰矿区","type":"历史人文","features":"北齐皇家石窟，飞天造像精美","distance":200,"drive":150,"days":1,"ticket":"60元左右","isFree":false,"note":"石窟+登山约半天"},
+  {"name":"八路军129师司令部旧址","city":"邯郸涉县","type":"红色教育","features":"刘邓大军总部，将军岭","distance":235,"drive":180,"days":2,"ticket":"免费","isFree":true,"note":"和娲皇宫同在涉县"},
+  {"name":"娲皇宫","city":"邯郸涉县","type":"历史人文","features":"女娲补天圣地，崖壁悬空吊庙","distance":230,"drive":180,"days":2,"ticket":"80元左右","isFree":false,"note":"古建奇观值得看"},
+  {"name":"京娘湖","city":"邯郸武安市","type":"自然山水","features":"宋太祖送京娘传说，高峡平湖","distance":240,"drive":180,"days":2,"ticket":"80元左右","isFree":false,"note":"可搭玻璃栈道"},
+  {"name":"开滦国家矿山公园","city":"唐山市区","type":"历史人文","features":"百年煤矿工业遗产，井下探秘游","distance":420,"drive":300,"days":2,"ticket":"100元左右","isFree":false,"note":"井下段很震撼"},
+  {"name":"唐山南湖","city":"唐山市区","type":"亲子休闲","features":"世园会旧址，城市绿心夜景好","distance":420,"drive":300,"days":2,"ticket":"免费(项目另收费)","isFree":true,"note":"和开滦公园同在市区"},
+  {"name":"清东陵","city":"唐山遵化市","type":"历史人文","features":"世界文化遗产，顺治康熙乾隆陵寝","distance":440,"drive":312,"days":2,"ticket":"108元通票","isFree":false,"note":"建议请讲解"},
+  {"name":"滦州古城","city":"唐山滦州市","type":"古镇古村","features":"契丹风情古城，滦河夜市","distance":470,"drive":330,"days":2,"ticket":"免费","isFree":true,"note":"夜景+紫陶街"},
+  {"name":"唐山湾国际旅游岛","city":"唐山乐亭县","type":"海滨海岛","features":"月岛+菩提岛+祥云岛，海泥温泉","distance":530,"drive":372,"days":2,"ticket":"110元左右(含船票)","isFree":false,"note":"夏天海岛度假"},
+  {"name":"阿那亚·黄金海岸","city":"秦皇岛昌黎县","type":"海滨海岛","features":"孤独图书馆+白色礼堂，文艺海边社区","distance":520,"drive":360,"days":2,"ticket":"免费(需预约或住宿)","isFree":true,"note":"旺季需提前预约"},
+  {"name":"鸽子窝公园","city":"秦皇岛北戴河","type":"海滨海岛","features":"观日出圣地，退潮赶海挖蛤","distance":550,"drive":372,"days":2,"ticket":"25元左右","isFree":false,"note":"日出前一小时到"},
+  {"name":"山海关古城","city":"秦皇岛山海关区","type":"历史人文","features":"天下第一关城楼，明清街巷","distance":560,"drive":390,"days":2,"ticket":"50元左右","isFree":false,"note":"可登城墙"},
+  {"name":"老龙头","city":"秦皇岛山海关区","type":"历史人文","features":"万里长城唯一入海处","distance":565,"drive":390,"days":2,"ticket":"50元左右","isFree":false,"note":"和山海关联游"},
+  {"name":"祖山","city":"秦皇岛青龙县","type":"自然山水","features":"塞北黄山，天女木兰花海","distance":560,"drive":390,"days":2,"ticket":"80元左右","isFree":false,"note":"有索道省力"},
+  {"name":"避暑山庄","city":"承德市区","type":"历史人文","features":"世界遗产，中国皇家园林之首","distance":380,"drive":270,"days":2,"ticket":"145元左右(旺季)","isFree":false,"note":"至少留大半天"},
+  {"name":"外八庙(普宁寺·小布达拉宫)","city":"承德市区","type":"历史人文","features":"藏汉合璧皇家寺庙群，金顶红墙","distance":385,"drive":276,"days":2,"ticket":"80元左右","isFree":false,"note":"和避暑山庄套票更划算"},
+  {"name":"磬锤峰","city":"承德市区","type":"自然山水","features":"棒槌山丹霞奇峰，承德地标","distance":390,"drive":282,"days":2,"ticket":"50元左右(索道另计)","isFree":false,"note":"远观也出片"},
+  {"name":"金山岭长城","city":"承德滦平县","type":"历史人文","features":"万里长城最精华段，摄影天堂","distance":330,"drive":240,"days":2,"ticket":"65元左右","isFree":false,"note":"日出日落绝美"},
+  {"name":"雾灵山","city":"承德兴隆县","type":"自然山水","features":"京东第一峰，云海日出原始森林","distance":330,"drive":240,"days":2,"ticket":"100元左右","isFree":false,"note":"山顶温差大带外套"},
+  {"name":"御道口草原森林风景区","city":"承德围场县","type":"草原湿地","features":"坝上草原+木兰秋狝故地，风电风车","distance":510,"drive":360,"days":3,"ticket":"130元左右(联票)","isFree":false,"note":"7-8月避暑绝佳"},
+  {"name":"塞罕坝国家森林公园","city":"承德围场县","type":"草原湿地","features":"人造林海奇迹，七星湖白桦林","distance":530,"drive":372,"days":3,"ticket":"150元左右(联票)","isFree":false,"note":"和御道口连游"},
+  {"name":"鸡鸣驿","city":"张家口怀来县","type":"古镇古村","features":"全国最大古驿站，明清邮驿活化石","distance":240,"drive":180,"days":1,"ticket":"40元左右","isFree":false,"note":"《大话西游》取景地"},
+  {"name":"暖泉古镇","city":"张家口蔚县","type":"古镇古村","features":"打树花发源地，蔚县古堡群","distance":250,"drive":192,"days":2,"ticket":"古镇免费 树花演出另收费","isFree":true,"note":"树花周末晚场"},
+  {"name":"小五台·金河口","city":"张家口蔚县","type":"自然山水","features":"河北屋脊，金河飞瀑徒步圣地","distance":290,"drive":216,"days":2,"ticket":"65元左右","isFree":false,"note":"徒步强度大量力而行"},
+  {"name":"草原天路","city":"张家口张北县","type":"草原湿地","features":"中国66号公路，风车花海梯田","distance":370,"drive":270,"days":2,"ticket":"公路免费","isFree":true,"note":"自驾精华段100公里"},
+  {"name":"中都草原","city":"张家口张北县","type":"草原湿地","features":"元中都遗址旁，骑马烤全羊篝火","distance":375,"drive":276,"days":2,"ticket":"免费进入(项目另收费)","isFree":true,"note":"7-8月草最美"},
+  {"name":"大境门","city":"张家口市区","type":"历史人文","features":"万里长城四大关口之一，张库大道起点","distance":320,"drive":240,"days":1,"ticket":"免费","isFree":true,"note":"市区顺路打卡"},
+  {"name":"万龙滑雪场","city":"张家口崇礼区","type":"滑雪冰雪","features":"雪道最多的大型雪场，粉雪好","distance":350,"drive":252,"days":2,"ticket":"雪票300元以上(雪季)","isFree":false,"note":"11月-次年4月"},
+  {"name":"太舞滑雪小镇","city":"张家口崇礼区","type":"滑雪冰雪","features":"冬奥赛场级雪场，瑞士风情小镇","distance":355,"drive":258,"days":2,"ticket":"雪票300元以上(雪季)","isFree":false,"note":"四季山地度假"},
+  {"name":"娘子关","city":"山西阳泉平定县","type":"历史人文","features":"长城著名关隘+水上人家瀑布，北国小江南","distance":90,"drive":72,"days":1,"ticket":"关城+瀑布联票约50元","isFree":false,"note":"平阳公主镇守地 最近的外省景点"},
+  {"name":"固关长城","city":"山西阳泉平定县","type":"历史人文","features":"明代内长城保存最完好段，瓮城完整","distance":100,"drive":78,"days":1,"ticket":"40元左右","isFree":false,"note":"太旧高速旁顺路游"},
+  {"name":"藏山","city":"山西阳泉盂县","type":"历史人文","features":"赵氏孤儿藏身地，忠义文化名山","distance":110,"drive":84,"days":1,"ticket":"70元左右","isFree":false,"note":"山中有藏孤洞"},
+  {"name":"五台山","city":"山西忻州五台县","type":"历史人文","features":"佛教四大名山之首，文殊菩萨道场，古刹林立","distance":230,"drive":180,"days":2,"ticket":"135元(旺季进山费)","isFree":false,"note":"台怀镇住一晚可看日出"},
+  {"name":"雁门关","city":"山西忻州代县","type":"历史人文","features":"中华第一关，长城要塞，杨家将故事地","distance":330,"drive":240,"days":2,"ticket":"90元左右","isFree":false,"note":"登上雁塔俯瞰群山"},
+  {"name":"万年冰洞","city":"山西忻州宁武县","type":"自然山水","features":"300万年冰洞四季不化，冰笋冰瀑奇观","distance":330,"drive":240,"days":2,"ticket":"120元左右","isFree":false,"note":"夏天进洞要穿棉衣"},
+  {"name":"芦芽山","city":"山西忻州宁武县","type":"自然山水","features":"华北原始森林+马仑高山草甸，登太子殿","distance":330,"drive":240,"days":2,"ticket":"100元左右","isFree":false,"note":"和万年冰洞连游"},
+  {"name":"晋祠","city":"山西太原","type":"历史人文","features":"中国现存最早皇家园林，宋塑侍女像","distance":230,"drive":180,"days":1,"ticket":"80元左右","isFree":false,"note":"三绝：周柏、难老泉、宋塑"},
+  {"name":"山西博物院","city":"山西太原","type":"历史人文","features":"晋侯鸟尊镇馆，青铜器大馆","distance":230,"drive":180,"days":1,"ticket":"免费","isFree":true,"note":"周一闭馆需预约"},
+  {"name":"平遥古城","city":"山西晋中平遥县","type":"古镇古村","features":"世界遗产，明清县城活标本，日升昌票号","distance":240,"drive":180,"days":2,"ticket":"进城免费 通票125元","isFree":true,"note":"古城夜景灯笼很美"},
+  {"name":"乔家大院","city":"山西晋中祁县","type":"历史人文","features":"晋商大院代表，《大红灯笼高高挂》取景地","distance":220,"drive":168,"days":1,"ticket":"115元左右","isFree":false,"note":"可与平遥同游"},
+  {"name":"王家大院","city":"山西晋中灵石县","type":"历史人文","features":"民间故宫，砖木石三雕艺术巅峰","distance":270,"drive":210,"days":2,"ticket":"55元左右","isFree":false,"note":"规模比乔家大院大得多"},
+  {"name":"绵山","city":"山西晋中介休市","type":"自然山水","features":"寒食节起源地，悬崖古寺+栈道+水涛沟","distance":260,"drive":198,"days":2,"ticket":"110元左右","isFree":false,"note":"介子推隐居地"},
+  {"name":"应县木塔","city":"山西朔州应县","type":"历史人文","features":"世界现存最高最古木塔，全木无钉无铆","distance":350,"drive":270,"days":2,"ticket":"50元左右","isFree":false,"note":"和悬空寺连线游"},
+  {"name":"悬空寺","city":"山西大同浑源县","type":"历史人文","features":"悬挂在崖壁上的千年古寺，建筑奇观","distance":380,"drive":288,"days":2,"ticket":"115元左右(含登临)","isFree":false,"note":"旺季限流建议早去"},
+  {"name":"北岳恒山","city":"山西大同浑源县","type":"自然山水","features":"五岳之一，道教名山，恒山十八景","distance":390,"drive":300,"days":2,"ticket":"47元左右","isFree":false,"note":"和悬空寺同一天"},
+  {"name":"云冈石窟","city":"山西大同","type":"历史人文","features":"世界遗产，北魏皇家石窟，昙曜五窟","distance":420,"drive":315,"days":2,"ticket":"120元左右","isFree":false,"note":"与大同古城连游"},
+  {"name":"大同古城墙","city":"山西大同","type":"历史人文","features":"北魏京华明清重镇，城墙夜景灯光秀","distance":420,"drive":315,"days":2,"ticket":"免费","isFree":true,"note":"顺看九龙壁和华严寺"},
+  {"name":"洪洞大槐树","city":"山西临汾洪洞县","type":"历史人文","features":"寻根祭祖圣地，明代大移民遗址","distance":280,"drive":210,"days":1,"ticket":"80元左右","isFree":false,"note":"问我祖先在何处，山西洪洞大槐树"},
+  {"name":"壶口瀑布","city":"山西临汾吉县","type":"自然山水","features":"世界最大黄色瀑布，黄河奔腾","distance":530,"drive":390,"days":2,"ticket":"100元左右","isFree":false,"note":"山西侧视角更震撼 春秋水量大"},
+  {"name":"太行山大峡谷·八泉峡","city":"山西长治壶关县","type":"自然山水","features":"太行水路峡谷，游船+索道+电梯全体验","distance":250,"drive":198,"days":2,"ticket":"100元左右(通票)","isFree":false,"note":"山西峡谷精华"},
+  {"name":"皇城相府","city":"山西晋城阳城县","type":"历史人文","features":"康熙帝师陈廷敬故居，城堡式官宅建筑群","distance":330,"drive":252,"days":2,"ticket":"120元左右","isFree":false,"note":"河山楼可登"},
+  {"name":"王莽岭","city":"山西晋城陵川县","type":"自然山水","features":"太行云顶云海，锡崖沟挂壁公路","distance":300,"drive":240,"days":2,"ticket":"110元左右","isFree":false,"note":"挂壁公路自驾震撼"},
+  {"name":"碛口古镇","city":"山西吕梁临县","type":"古镇古村","features":"九曲黄河第一镇，明清商埠码头","distance":380,"drive":300,"days":2,"ticket":"免费","isFree":true,"note":"李家山村窑洞日落绝美"},
+  {"name":"解州关帝庙","city":"山西运城解州镇","type":"历史人文","features":"关帝祖庙，天下武庙之祖","distance":470,"drive":360,"days":2,"ticket":"60元左右","isFree":false,"note":"关公故里盐湖顺路"},
+  {"name":"殷墟","city":"河南安阳市区","type":"历史人文","features":"商代晚期都城遗址，甲骨文发现地","distance":200,"drive":132,"days":1,"ticket":"80元左右","isFree":false,"note":"新馆2024年开放很震撼"},
+  {"name":"中国文字博物馆","city":"河南安阳市区","type":"历史人文","features":"全国唯一文字主题博物馆，甲骨文之美","distance":200,"drive":132,"days":1,"ticket":"免费","isFree":true,"note":"周一闭馆需预约"},
+  {"name":"红旗渠","city":"河南安阳林州市","type":"红色教育","features":"人工天河，世界第八大奇迹","distance":240,"drive":180,"days":1,"ticket":"100元左右","isFree":false,"note":"青年洞+分水苑"},
+  {"name":"林州太行大峡谷","city":"河南安阳林州市","type":"自然山水","features":"桃花谷+王相岩，北方山水画廊","distance":250,"drive":192,"days":2,"ticket":"100元左右(含交通)","isFree":false,"note":"可搭配红旗渠两日"},
+  {"name":"八里沟","city":"河南新乡辉县市","type":"自然山水","features":"太行水世界，瀑布成群可戏水","distance":290,"drive":228,"days":2,"ticket":"80元左右","isFree":false,"note":"夏天亲子玩水好去处"},
+  {"name":"万仙山·郭亮村","city":"河南新乡辉县市","type":"自然山水","features":"绝壁长廊挂壁公路，崖上人家","distance":300,"drive":228,"days":2,"ticket":"100元左右(含交通)","isFree":false,"note":"自驾挂壁公路需换乘景区车"},
+  {"name":"云台山","city":"河南焦作修武县","type":"自然山水","features":"红石峡+云台天瀑，世界地质公园","distance":330,"drive":240,"days":2,"ticket":"180元左右(含交通)","isFree":false,"note":"峡谷水景河南第一"},
+  {"name":"河南博物院","city":"河南郑州市区","type":"历史人文","features":"贾湖骨笛+妇好鸮尊，中原文化总纲","distance":330,"drive":240,"days":1,"ticket":"免费","isFree":true,"note":"周一闭馆 华夏古乐演出值得看"},
+  {"name":"少林寺·嵩山","city":"河南郑州登封市","type":"历史人文","features":"禅宗祖庭功夫圣地，塔林+三皇寨栈道","distance":370,"drive":270,"days":2,"ticket":"80元左右","isFree":false,"note":"武术表演上午场次"},
+  {"name":"只有河南·戏剧幻城","city":"河南郑州中牟县","type":"历史人文","features":"沉浸式戏剧主题公园，21个剧场","distance":350,"drive":258,"days":1,"ticket":"238元起","isFree":false,"note":"建议留一整天看剧"},
+  {"name":"清明上河园","city":"河南开封","type":"亲子休闲","features":"宋文化主题园，《清明上河图》实景","distance":390,"drive":288,"days":2,"ticket":"120元左右","isFree":false,"note":"晚场东京梦华演出"},
+  {"name":"开封鼓楼夜市","city":"河南开封","type":"美食街区","features":"千年汴京夜市，灌汤包+炒凉粉","distance":385,"drive":288,"days":1,"ticket":"免费","isFree":true,"note":"晚上六点后最热闹"},
+  {"name":"龙门石窟","city":"河南洛阳市区","type":"历史人文","features":"世界遗产，卢舍那大佛，北魏唐代造像","distance":430,"drive":312,"days":2,"ticket":"90元左右","isFree":false,"note":"夜景场灯光更美"},
+  {"name":"白马寺","city":"河南洛阳市区","type":"历史人文","features":"中国第一古刹，佛教传入中国第一寺","distance":425,"drive":312,"days":2,"ticket":"35元左右","isFree":false,"note":"国际佛殿区值得逛"},
+  {"name":"洛阳博物馆","city":"河南洛阳市区","type":"历史人文","features":"唐三彩+夏商周青铜，十三朝缩影","distance":430,"drive":312,"days":2,"ticket":"免费","isFree":true,"note":"周一闭馆"},
+  {"name":"老君山","city":"河南洛阳栾川县","type":"历史人文","features":"道教名山，金顶云海，远赴人间惊鸿宴","distance":545,"drive":390,"days":2,"ticket":"100元左右(索道另计)","isFree":false,"note":"冬天雪景金顶最出片"}
+];
+
+// ---------- 网络下载的自定义景点（localStorage 持久化） ----------
+let customData = [];
+try { customData = JSON.parse(localStorage.getItem("sjz_custom_data") || "[]"); } catch (e) { customData = []; }
+customData.forEach(d => DATA.push(d));
+
+// ---------- 状态 ----------
+const state = { province: "all", city: "all", type: "all", maxDist: 700, days: "all", search: "", freeOnly: false };
+const WHEEL_CAP = 20; // 转盘最多放的扇区数
+
+// ---------- 省市解析 ----------
+function provinceOf(cityStr) {
+  return cityStr.startsWith("山西") ? "山西" : cityStr.startsWith("河南") ? "河南" : "河北";
+}
+function baseCityOf(cityStr) {
+  const s = cityStr.replace(/^(山西|河南)/, "");
+  return ["石家庄", "秦皇岛", "张家口"].includes(s.slice(0, 3)) ? s.slice(0, 3) : s.slice(0, 2);
+}
+
+// ---------- 待选区 ----------
+let candidates = []; // 进入转盘的景点（引用 DATA 条目）
+try {
+  const saved = JSON.parse(localStorage.getItem("sjz_candidates") || "[]");
+  candidates = saved.map(n => DATA.find(d => d.name === n)).filter(Boolean);
+} catch (e) { candidates = []; }
+function saveCands() {
+  try { localStorage.setItem("sjz_candidates", JSON.stringify(candidates.map(d => d.name))); } catch (e) {}
+}
+function inCands(d) { return candidates.some(c => c.name === d.name); }
+function toggleCand(d, on) {
+  if (on && !inCands(d)) candidates.push(d);
+  if (!on) candidates = candidates.filter(c => c.name !== d.name);
+  saveCands();
+  render(); // 重新渲染结果勾选态 + 待选区 + 转盘
+}
+
+// ---------- 下拉框初始化 ----------
+const types = [...new Set(DATA.map(d => d.type))];
+const provinceSel = document.getElementById("provinceSelect");
+const citySel = document.getElementById("citySelect");
+const typeSel = document.getElementById("typeSelect");
+[...new Set(DATA.map(d => provinceOf(d.city)))].forEach(p => provinceSel.add(new Option(p, p)));
+types.forEach(t => typeSel.add(new Option(t, t)));
+function refreshCityOptions() {
+  citySel.innerHTML = '<option value="all">全部城市</option>';
+  DATA.filter(d => state.province === "all" || provinceOf(d.city) === state.province)
+      .map(d => baseCityOf(d.city))
+      .filter((v, i, a) => a.indexOf(v) === i)
+      .sort()
+      .forEach(c => citySel.add(new Option(c, c)));
+}
+refreshCityOptions();
+
+// ---------- 筛选逻辑 ----------
+function filtered() {
+  return DATA.filter(d => {
+    if (state.province !== "all" && provinceOf(d.city) !== state.province) return false;
+    if (state.city !== "all" && baseCityOf(d.city) !== state.city) return false;
+    if (state.type !== "all" && d.type !== state.type) return false;
+    if (d.distance > state.maxDist) return false;
+    if (state.days !== "all" && d.days > parseFloat(state.days)) return false;
+    if (state.freeOnly && !d.isFree) return false;
+    if (state.search) {
+      const kw = state.search.toLowerCase();
+      const hay = (d.name + d.city + d.type + d.features + d.note).toLowerCase();
+      if (!hay.includes(kw)) return false;
+    }
+    return true;
+  }).sort((a, b) => a.distance - b.distance);
+}
+
+// ---------- 渲染列表 ----------
+function render() {
+  const list = filtered();
+  document.getElementById("countText").textContent = "共 " + list.length + " 个";
+  const box = document.getElementById("resultList");
+  box.innerHTML = "";
+  if (!list.length) {
+    if (state.search && state.search.length >= 2) {
+      // 本地无结果 → 联网查询（有缓存不重复请求）
+      box.innerHTML = '<div class="empty-tip">😅 本地没有「' + state.search + '」</div>' +
+        '<div id="webBox"><div class="empty-tip">🌐 正在联网查询「' + state.search + '」…</div></div>';
+      if (webCache.kw === state.search) {
+        document.getElementById("webBox").innerHTML = webResultsHTML(webCache.items);
+        bindWebButtons();
+      } else {
+        webSearch(state.search);
+      }
+    } else {
+      box.innerHTML = '<div class="empty-tip">😅 没有符合条件的景点，放宽点条件试试～</div>';
+    }
+  }
+  list.forEach(d => {
+    const card = document.createElement("div");
+    card.className = "card pickable";
+    card.innerHTML =
+      '<input type="checkbox" class="pick-box" title="加入/移出待选区" ' + (inCands(d) ? "checked" : "") + '>' +
+      '<div><div class="name">' + d.name + '</div>' +
+      '<div class="meta">' +
+        '<span class="tag">' + d.type + '</span>' +
+        (d.isFree ? '<span class="tag free">免费</span>' : '') +
+        '<span class="tag">' + d.city + '</span><br>' +
+        d.features + '<br>' +
+        '⏱ 建议 ' + (d.days < 1 ? "半天" : d.days + " 天") + ' ｜ 🎫 ' + d.ticket +
+        (d.note ? ' ｜ 💡 ' + d.note : '') +
+      '</div></div>' +
+      '<div class="dist-box"><div class="dist">' + d.distance + ' km</div>' +
+      '<div class="drive">车程约 ' + (d.drive >= 60 ? Math.floor(d.drive/60) + '小时' + (d.drive%60 ? (d.drive%60) + '分' : '') : d.drive + '分钟') + '</div></div>';
+    card.querySelector(".pick-box").onchange = e => toggleCand(d, e.target.checked);
+    box.appendChild(card);
+  });
+  renderCandidates();
+  drawWheel(candidates);
+}
+
+// ---------- 待选区渲染 ----------
+function renderCandidates() {
+  const box = document.getElementById("candList");
+  document.getElementById("candCount").textContent = "（" + candidates.length + " 个，进转盘）";
+  box.innerHTML = "";
+  if (!candidates.length) {
+    box.innerHTML = '<div class="cand-empty">从左边勾选景点，或用「随机选」抽几个进来</div>';
+    return;
+  }
+  candidates.forEach(d => {
+    const item = document.createElement("div");
+    item.className = "cand-item";
+    item.innerHTML =
+      '<div><span class="cand-name">' + d.name + '</span><br>' +
+      '<span class="cand-meta">' + d.city + ' · ' + d.distance + ' km</span></div>';
+    const del = document.createElement("button");
+    del.className = "cand-del";
+    del.textContent = "✕";
+    del.title = "移出待选区";
+    del.onclick = () => toggleCand(d, false);
+    item.appendChild(del);
+    box.appendChild(item);
+  });
+}
+
+// ---------- 随机抽 X 个 ----------
+function randPick() {
+  const pool = filtered().filter(d => !inCands(d));
+  if (!pool.length) { alert("当前筛选结果都已经在待选区里啦～"); return; }
+  let x = parseInt(document.getElementById("randCount").value) || 1;
+  x = Math.min(Math.max(x, 1), pool.length);
+  const picked = pool.slice().sort(() => Math.random() - 0.5).slice(0, x);
+  picked.forEach(d => candidates.push(d));
+  saveCands();
+  render();
+}
+
+// ---------- 联网搜索（本地无结果时，查 OpenStreetMap 开放数据） ----------
+const SJZ_COORD = [38.0422, 114.5144]; // 石家庄市区
+function haversine(lat1, lon1, lat2, lon2) {
+  const rad = Math.PI / 180, Rk = 6371;
+  const dLat = (lat2 - lat1) * rad, dLon = (lon2 - lon1) * rad;
+  const s = Math.sin(dLat/2)**2 + Math.cos(lat1*rad)*Math.cos(lat2*rad)*Math.sin(dLon/2)**2;
+  return 2 * Rk * Math.asin(Math.sqrt(s));
+}
+function classifyWeb(r) {
+  const t = (r.type || "") + (r.class || "");
+  if (/museum|monument|castle|artwork|gallery|temple|memorial|ruins|fort|archaeolog|city_gate|citywall/.test(t)) return "历史人文";
+  if (/park|garden|zoo|aquarium|playground/.test(t)) return "亲子休闲";
+  if (/waterfall|peak|volcano|cave|beach|bay|lake|river|mountain|nature|geyser|hot_spring/.test(t)) return "自然山水";
+  if (/hotel|resort/.test(t)) return "温泉度假";
+  if (/village|town/.test(t)) return "古镇古村";
+  return "其他";
+}
+function normalizeWebItem(r) {
+  const a = r.address || {};
+  const state = (a.state || "").replace(/省$/, "");
+  const pref = (a.city || a.county || "").replace(/市$/, "");
+  const dist = (a.county || a.suburb || a.city_district || a.town || a.village || "").replace(/市$/, "");
+  let city = dist || pref || state || "未知地区";
+  if (state === "山西") city = "山西" + city;
+  else if (state === "河南") city = "河南" + city;
+  const distance = Math.round(haversine(SJZ_COORD[0], SJZ_COORD[1], +r.lat, +r.lon));
+  const et = r.extratags || {};
+  const fee = et.charge || et.fee || "";
+  return {
+    name: ((r.name || "").trim()) || r.display_name.split(",")[0].trim(),
+    city: city,
+    type: classifyWeb(r),
+    features: (et.description || r.display_name).slice(0, 80),
+    distance: distance,
+    drive: Math.max(10, Math.round(distance * 0.8)),
+    days: distance < 60 ? 1 : distance < 220 ? 2 : 3,
+    ticket: fee || "未知（自行核实）",
+    isFree: /^no$/i.test(fee) || /免费/.test(fee),
+    note: "OSM 网络数据 · 出行前请核实",
+    _lat: +r.lat, _lon: +r.lon
+  };
+}
+let webCache = { kw: "", items: [] };
+function webResultsHTML(items) {
+  const fresh = items.filter(d => !DATA.some(x => x.name === d.name));
+  if (!fresh.length) return '<div class="empty-tip">🌐 网上的结果都已加入本地数据啦</div>';
+  return fresh.map(d => {
+    const i = webCache.items.indexOf(d);
+    return '<div class="card pickable"><div><div class="name">🌐 ' + d.name + '</div>' +
+      '<div class="meta"><span class="tag">' + d.type + '</span><span class="tag">' + d.city + '</span><br>' +
+      d.features + '</div></div>' +
+      '<div class="dist-box"><div class="dist">' + d.distance + ' km</div>' +
+      '<button class="btn btn-rand" data-web="' + i + '" style="margin-top:6px;padding:5px 14px;font-size:12.5px;">➕ 加入</button></div></div>';
+  }).join("") + '<div class="empty-tip">🌐 来自 OpenStreetMap 开放数据 · 点「加入」保存到本地（刷新不丢失）</div>';
+}
+function bindWebButtons() {
+  document.querySelectorAll("#resultList [data-web]").forEach(btn => {
+    btn.onclick = () => addCustom(webCache.items[+btn.dataset.web]);
+  });
+}
+async function webSearch(kw) {
+  try {
+    const url = "https://nominatim.openstreetmap.org/search?format=jsonv2&addressdetails=1&extratags=1&limit=8&accept-language=zh-CN&bounded=1&viewbox=110,43,119,31.5&q=" + encodeURIComponent(kw);
+    const res = await fetch(url);
+    if (!res.ok) throw new Error(res.status);
+    const arr = await res.json();
+    const items = arr.filter(r => ["tourism", "leisure", "historic", "natural"].includes(r.class)).map(normalizeWebItem);
+    webCache = { kw: kw, items: items };
+    const box = document.getElementById("webBox");
+    if (box) {
+      box.innerHTML = items.length ? webResultsHTML(items) : '<div class="empty-tip">🌐 网上也没查到，换个关键字试试</div>';
+      bindWebButtons();
+    }
+  } catch (e) {
+    const box = document.getElementById("webBox");
+    if (box) box.innerHTML = '<div class="empty-tip">🌐 联网查询失败，请检查网络后重试</div>';
+  }
+}
+function addCustom(d) {
+  if (!d || DATA.some(x => x.name === d.name)) return;
+  DATA.push(d);
+  customData.push(d);
+  try { localStorage.setItem("sjz_custom_data", JSON.stringify(customData)); } catch (e) {}
+  // 类型下拉框补充新类型
+  const cur = typeSel.value;
+  typeSel.innerHTML = '<option value="all">全部类型</option>';
+  [...new Set(DATA.map(x => x.type))].forEach(t => typeSel.add(new Option(t, t)));
+  typeSel.value = [...typeSel.options].some(o => o.value === cur) ? cur : "all";
+  render();
+}
+
+// ---------- 转盘 ----------
+const canvas = document.getElementById("wheel");
+const ctx = canvas.getContext("2d");
+const SIZE = 800, CX = SIZE/2, CY = SIZE/2, R = SIZE/2 - 8;
+const COLORS = ["#2f6f4f","#56a379","#8cbfa3","#e0a13f","#e07a3f","#c9605a","#7a6ea8","#4f8fb5","#6da34d","#b58a3d"];
+let wheelItems = [], angle = 0, spinning = false, spinWinner = null;
+let particles = [], curSpeed = 0, lastAngle = angle, lastTime = 0, winFlash = 0;
+let spinId = 0; // 动画令牌：新的一次旋转会让旧的动画循环自动作废
+
+// 预渲染的发光火花贴图：一次画好，之后每帧只是贴图，比逐颗 shadowBlur 快几十倍
+const sparkSprite = (function () {
+  const c = document.createElement("canvas");
+  c.width = c.height = 32;
+  const s = c.getContext("2d");
+  const g = s.createRadialGradient(16, 16, 0, 16, 16, 16);
+  g.addColorStop(0, "rgba(255,255,255,1)");
+  g.addColorStop(0.3, "rgba(255,225,140,0.95)");
+  g.addColorStop(0.65, "rgba(255,180,80,0.55)");
+  g.addColorStop(1, "rgba(255,160,60,0)");
+  s.fillStyle = g;
+  s.fillRect(0, 0, 32, 32);
+  return c;
+})();
+
+// 底图缓存：扇区和文字只在内容变化时画一次，每帧只做"贴图+旋转"，帧率稳
+const baseCanvas = document.createElement("canvas");
+baseCanvas.width = baseCanvas.height = SIZE;
+const bctx = baseCanvas.getContext("2d");
+let baseKey = "";
+
+function drawWheel(items) {
+  wheelItems = items.slice(0, WHEEL_CAP);
+  document.getElementById("wheelEmpty").style.display = items.length ? "none" : "flex";
+  document.getElementById("spinBtn").disabled = !items.length || spinning;
+  ctx.clearRect(0, 0, SIZE, SIZE);
+  const n = wheelItems.length;
+  if (!n) { baseKey = ""; return; }
+  const key = n + "|" + wheelItems.map(d => d.name).join("|");
+  if (key !== baseKey) { buildBase(n); baseKey = key; }
+  ctx.save();
+  ctx.translate(CX, CY);
+  ctx.rotate(angle);
+  ctx.drawImage(baseCanvas, -CX, -CY);
+  ctx.restore();
+  drawFX();
+}
+
+function buildBase(n) {
+  bctx.clearRect(0, 0, SIZE, SIZE);
+  const arc = Math.PI * 2 / n;
+  for (let i = 0; i < n; i++) {
+    const start = i * arc;
+    bctx.beginPath();
+    bctx.moveTo(CX, CY);
+    bctx.arc(CX, CY, R, start, start + arc);
+    bctx.fillStyle = COLORS[i % COLORS.length];
+    bctx.fill();
+    bctx.strokeStyle = "#fff";
+    bctx.lineWidth = 2;
+    bctx.stroke();
+    // 文字
+    bctx.save();
+    bctx.translate(CX, CY);
+    bctx.rotate(start + arc / 2);
+    bctx.textAlign = "right";
+    bctx.fillStyle = "#fff";
+    const label = wheelItems[i].name.length > 10 ? wheelItems[i].name.slice(0, 10) + "…" : wheelItems[i].name;
+    // 按扇区角度和字数自适应字号：径向放得下、弧向不挤出扇区，尽量占满
+    const chars = label.length;
+    let fs = Math.min(46, (R - 16) / (chars + 0.6 + 1 / (0.9 * arc)));
+    fs = Math.max(Math.round(fs), 14);
+    bctx.font = "bold " + fs + "px 'Microsoft YaHei'";
+    bctx.shadowColor = "rgba(0,0,0,.3)";
+    bctx.shadowBlur = 2;
+    bctx.textBaseline = "middle";
+    bctx.fillText(label, R - 12, 0);
+    bctx.restore();
+  }
+  bctx.beginPath();
+  bctx.arc(CX, CY, R, 0, Math.PI * 2);
+  bctx.strokeStyle = "#2f6f4f";
+  bctx.lineWidth = 4;
+  bctx.stroke();
+}
+
+// ---------- 光影特效 ----------
+function drawFX() {
+  const now = performance.now();
+  // 1) 高速拖影：随旋转飘出的白色残影弧线
+  if (spinning && curSpeed > 6) {
+    const intensity = Math.min((curSpeed - 6) / 30, 1);
+    ctx.save();
+    ctx.globalAlpha = 0.12 + 0.25 * intensity;
+    ctx.strokeStyle = "#fff8e0";
+    ctx.lineCap = "round";
+    for (let i = 0; i < 3; i++) {
+      const a = angle - i * 0.2;
+      ctx.beginPath();
+      ctx.arc(CX, CY, R - 3 - i * 2, a - 0.6, a);
+      ctx.lineWidth = 6 - i * 1.5;
+      ctx.stroke();
+    }
+    ctx.restore();
+  }
+  // 2) 外圈金色流光（旋转时呼吸闪烁）
+  if (spinning) {
+    const pulse = 0.55 + 0.45 * Math.sin(now / 90);
+    ctx.save();
+    ctx.globalAlpha = 0.5 * pulse;
+    ctx.strokeStyle = "#ffd97a";
+    ctx.shadowColor = "#ffb84d";
+    ctx.shadowBlur = 18;
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.arc(CX, CY, R + 2, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.restore();
+  }
+  // 3) 火花粒子（贴图渲染，无实时辉光开销）
+  ctx.save();
+  for (const p of particles) {
+    ctx.globalAlpha = Math.max(p.life / p.maxLife, 0);
+    const s = p.size * 7;
+    ctx.drawImage(sparkSprite,
+      CX + Math.cos(p.a) * p.r - s / 2,
+      CY + Math.sin(p.a) * p.r - s / 2, s, s);
+  }
+  ctx.restore();
+  // 4) 中奖金光扩散波纹
+  if (winFlash > 0) {
+    const k = 1 - winFlash;
+    ctx.save();
+    ctx.globalAlpha = winFlash;
+    ctx.strokeStyle = "#ffcf6b";
+    ctx.shadowColor = "#ffb84d";
+    ctx.shadowBlur = 25;
+    ctx.lineWidth = 4;
+    ctx.beginPath();
+    ctx.arc(CX, CY, R * (0.5 + 0.6 * k), 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.restore();
+  }
+}
+
+function updateParticles(dt) {
+  for (const p of particles) { p.r += p.vr * dt; p.a += p.va * dt; p.life -= dt; }
+  particles = particles.filter(p => p.life > 0 && p.r < R + 70);
+}
+
+function spawnSparks(count, speed) {
+  if (particles.length > 160) return;
+  for (let i = 0; i < count; i++) {
+    const life = 0.5 + Math.random() * 0.6;
+    particles.push({
+      a: Math.random() * Math.PI * 2,
+      r: R - 6 + Math.random() * 8,
+      vr: 60 + Math.random() * 140 * Math.min(speed / 30, 1.5),
+      va: (Math.random() - 0.5) * 1.2,
+      size: 0.8 + Math.random() * 1.6,
+      life: life, maxLife: life
+    });
+  }
+}
+
+function spin() {
+  if (spinning || !wheelItems.length) return;
+  spinning = true;
+  spinWinner = null;
+  particles = [];
+  document.getElementById("spinBtn").disabled = true;
+  document.getElementById("winnerBox").innerHTML = "";
+  document.querySelector(".wheel-wrap").classList.add("spinning");
+  const idx = Math.floor(Math.random() * wheelItems.length);
+  const n = wheelItems.length;
+  const arc = Math.PI * 2 / n;
+  // 指针在正上方（-PI/2），中奖扇区中心要对准它
+  const targetCenter = -Math.PI / 2 - idx * arc - arc / 2;
+  const extraTurns = 13 + Math.floor(Math.random() * 4); // 13~16 圈，配合 10 秒
+  const startAngle = angle;
+  // 归一化：让最终角度 = targetCenter - 2π*extraTurns（多转几圈）
+  const total = targetCenter - startAngle + Math.PI * 2 * extraTurns;
+  const duration = 10000; // 转 10 秒
+  const t0 = performance.now();
+  const myId = ++spinId; // 本次旋转的令牌
+
+  // 慢 → 快 → 慢，且对比更强烈的节奏曲线
+  function easeInOutQuart(t) {
+    return t < 0.5 ? 8 * t * t * t * t : 1 - Math.pow(-2 * t + 2, 4) / 2;
+  }
+
+  lastAngle = startAngle;
+  lastTime = t0;
+
+  function frame(now) {
+    if (myId !== spinId) return; // 已有新的一次旋转，旧循环作废
+    const t = Math.min((now - t0) / duration, 1);
+    angle = startAngle + total * easeInOutQuart(t);
+    const dt = Math.max((now - lastTime) / 1000, 0.001);
+    curSpeed = Math.abs(angle - lastAngle) / dt; // 实时角速度
+    lastAngle = angle;
+    lastTime = now;
+    // 转得越快，迸出的火花越多
+    if (curSpeed > 5 && Math.random() < Math.min(curSpeed / 25, 1)) {
+      spawnSparks(Math.floor(curSpeed / 6), curSpeed);
+    }
+    updateParticles(dt);
+    drawWheel(wheelItems);
+    if (t < 1) {
+      requestAnimationFrame(frame);
+    } else {
+      // 停下：金光扩散 + 火花迸发
+      curSpeed = 0;
+      spinning = false;
+      winFlash = 1;
+      angle = angle % (Math.PI * 2); // 角度归一化，防止多次旋转后数值膨胀
+      document.querySelector(".wheel-wrap").classList.remove("spinning");
+      const wrap = document.querySelector(".wheel-wrap");
+      wrap.classList.add("flash");
+      setTimeout(() => wrap.classList.remove("flash"), 2100);
+      document.getElementById("spinBtn").disabled = false;
+      spawnSparks(40, 30);
+      const d = wheelItems[idx];
+      document.getElementById("winnerBox").innerHTML =
+        '<div class="w-card">🎉 就决定是你了！<div class="w-name">' + d.name + '</div>' +
+        '<div class="w-info">' + d.city + ' · ' + d.type + ' · 距离 ' + d.distance +
+        ' km · 建议' + (d.days < 1 ? "半天" : d.days + " 天") + '游<br>' + d.features + '</div></div>';
+      document.getElementById("panelWinner").innerHTML =
+        '上次转中：<b>' + d.name + '</b>（' + d.city + ' · ' + d.distance + ' km）';
+      // 让金光和余烬粒子飘完再收尾
+      requestAnimationFrame(flashFrame);
+    }
+  }
+
+  function flashFrame(now) {
+    if (myId !== spinId) return; // 已有新的一次旋转，旧循环作废
+    const dt = Math.max((now - lastTime) / 1000, 0.001);
+    lastTime = now;
+    winFlash = Math.max(winFlash - dt / 1.4, 0);
+    updateParticles(dt);
+    drawWheel(wheelItems);
+    if (winFlash > 0 || particles.length) requestAnimationFrame(flashFrame);
+  }
+  requestAnimationFrame(frame);
+}
+
+// ---------- 全屏弹窗 ----------
+const wheelModal = document.getElementById("wheelModal");
+// 用 JS 精确设定转盘为正方形：任何浏览器、任何窗口尺寸下都保证是正圆
+function fitWheel() {
+  const s = Math.max(280, Math.min(window.innerWidth * 0.92, window.innerHeight - 180, 880));
+  const wrap = document.querySelector(".wheel-wrap");
+  wrap.style.width = s + "px";
+  wrap.style.height = s + "px";
+}
+window.addEventListener("resize", fitWheel);
+fitWheel();
+function openWheelModal(autoSpin) {
+  wheelModal.classList.add("open");
+  document.body.style.overflow = "hidden"; // 背景页面不滚动
+  if (autoSpin && !spinning && wheelItems.length) spin();
+}
+function closeWheelModal() {
+  if (spinning) { alert("转盘正在飞转中，等它停下来再关吧～"); return; }
+  wheelModal.classList.remove("open");
+  document.body.style.overflow = "";
+}
+document.getElementById("openSpinBtn").onclick = () => openWheelModal(true);
+document.getElementById("modalClose").onclick = closeWheelModal;
+document.addEventListener("keydown", e => { if (e.key === "Escape") closeWheelModal(); });
+
+// ---------- 事件绑定 ----------
+provinceSel.onchange = e => {
+  state.province = e.target.value;
+  state.city = "all";
+  refreshCityOptions();
+  render();
+};
+citySel.onchange = e => { state.city = e.target.value; render(); };
+typeSel.onchange = e => { state.type = e.target.value; render(); };
+document.getElementById("distRange").oninput = e => {
+  state.maxDist = +e.target.value;
+  document.getElementById("distVal").textContent = state.maxDist + " km";
+  render();
+};
+document.getElementById("daysSelect").onchange = e => { state.days = e.target.value; render(); };
+document.getElementById("searchBox").oninput = e => { state.search = e.target.value.trim(); render(); };
+document.getElementById("freeOnly").onchange = e => { state.freeOnly = e.target.checked; render(); };
+document.getElementById("randPickBtn").onclick = randPick;
+document.getElementById("spinBtn").onclick = spin;
+document.getElementById("resetBtn").onclick = () => {
+  state.province = "all"; state.city = "all"; state.type = "all";
+  state.maxDist = 700; state.days = "all"; state.search = ""; state.freeOnly = false;
+  provinceSel.value = "all"; typeSel.value = "all";
+  refreshCityOptions();
+  document.getElementById("distRange").value = 700;
+  document.getElementById("distVal").textContent = "700 km";
+  document.getElementById("daysSelect").value = "all";
+  document.getElementById("searchBox").value = "";
+  document.getElementById("freeOnly").checked = false;
+  render();
+};
+
+render();
+</script>
+</body>
+</html>
