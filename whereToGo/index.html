@@ -204,6 +204,17 @@
     font-size: 22px; font-weight: bold; color: var(--accent);
   }
   .winner .w-info { font-size: 13px; color: var(--muted); margin-top: 4px; line-height: 1.6; }
+  .cap-hint {
+    display: none;
+    margin-top: 10px;
+    padding: 8px 12px;
+    font-size: 12.5px;
+    line-height: 1.6;
+    color: #8a5a1f;
+    background: #fdf3e3;
+    border: 1px solid #f0d9b0;
+    border-radius: 8px;
+  }
   .hub-center {
     position: absolute; left: 50%; top: 50%; transform: translate(-50%,-50%);
     width: 54px; height: 54px; border-radius: 50%; background: #fff;
@@ -327,6 +338,7 @@
   <div class="panel wheel-panel">
     <h2>⭐ 待选区 <span class="cand-count" id="candCount"></span></h2>
     <div class="cand-list" id="candList"></div>
+    <div class="cap-hint" id="panelCapHint" style="display:none;"></div>
     <div class="spin-area">
       <button class="btn btn-spin" id="openSpinBtn">🎡 开始转！</button>
       <div class="panel-winner" id="panelWinner"></div>
@@ -346,6 +358,7 @@
     <div class="wheel-empty" id="wheelEmpty" style="display:none;">待选区还是空的<br>先去勾选或随机抽取景点吧～</div>
     <div class="hub-center">🎲</div>
   </div>
+  <div class="cap-hint" id="wheelCapHint" style="display:none;"></div>
   <div class="spin-area">
     <button class="btn btn-spin" id="spinBtn">开始转！</button>
   </div>
@@ -603,10 +616,22 @@ function render() {
   drawWheel(candidates);
 }
 
+// 转盘容量提示：待选区超出 WHEEL_CAP 时明确告知，不再静默截断
+function setCapHint(el, total) {
+  if (!el) return;
+  if (total > WHEEL_CAP) {
+    el.textContent = "⚠️ 待选区共 " + total + " 个，转盘最多放 " + WHEEL_CAP + " 个，仅按添加顺序的前 " + WHEEL_CAP + " 个参与；想换一批可先在待选区删掉几个再转。";
+    el.style.display = "block";
+  } else {
+    el.style.display = "none";
+  }
+}
+
 // ---------- 待选区渲染 ----------
 function renderCandidates() {
   const box = document.getElementById("candList");
   document.getElementById("candCount").textContent = "（" + candidates.length + " 个，进转盘）";
+  setCapHint(document.getElementById("panelCapHint"), candidates.length);
   box.innerHTML = "";
   if (!candidates.length) {
     box.innerHTML = '<div class="cand-empty">从左边勾选景点，或用「随机选」抽几个进来</div>';
@@ -763,6 +788,7 @@ let baseKey = "";
 
 function drawWheel(items) {
   wheelItems = items.slice(0, WHEEL_CAP);
+  setCapHint(document.getElementById("wheelCapHint"), items.length);
   document.getElementById("wheelEmpty").style.display = items.length ? "none" : "flex";
   document.getElementById("spinBtn").disabled = !items.length || spinning;
   ctx.clearRect(0, 0, SIZE, SIZE);
