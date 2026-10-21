@@ -659,7 +659,13 @@ function randPick() {
   if (!pool.length) { alert("当前筛选结果都已经在待选区里啦～"); return; }
   let x = parseInt(document.getElementById("randCount").value) || 1;
   x = Math.min(Math.max(x, 1), pool.length);
-  const picked = pool.slice().sort(() => Math.random() - 0.5).slice(0, x);
+  // Fisher-Yates 洗牌：每个排列等概率，替代有偏的 sort(() => Math.random() - 0.5)
+  const shuffled = pool.slice();
+  for (let i = shuffled.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+  }
+  const picked = shuffled.slice(0, x);
   picked.forEach(d => candidates.push(d));
   saveCands();
   render();
